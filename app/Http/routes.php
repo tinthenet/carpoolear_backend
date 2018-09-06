@@ -27,8 +27,16 @@ Route::get('/plataforma-terminos-condiciones', 'HomeController@plataformaTermino
 Route::get('/colabora-como-colaborar', 'HomeController@colaboraComoColaborar');
 Route::get('/colabora-ideame-2014', 'HomeController@colaboraIdeame2014');
 Route::get('/difusion', 'HomeController@difusion');
+Route::get('/privacidad', 'HomeController@privacidad');
+Route::get('/terminos', 'HomeController@terminos');
 Route::get('/contacto', 'HomeController@contacto');
 Route::get('/autorojo', 'HomeController@autoRojo');
 Route::get('/descarga', 'HomeController@descarga');
 Route::get('/app/{name?}', 'HomeController@handleApp')->where('name', '[\/\w\.-]*');
-
+Route::get('/dev/{name?}', 'HomeController@handleDev')->where('name', '[\/\w\.-]*');
+Route::get('/desuscribirme', 'HomeController@desuscribirme');
+Route::get('/test', 'HomeController@test');
+Route::get('/encuentrocarpoolero', 'HomeController@encuentrocarpoolero');
+Route::get('/data', 'DataController@data');
+Route::get('/donar', 'HomeController@donar');
+Route::get('/datos', 'HomeController@datos');

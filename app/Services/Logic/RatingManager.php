@@ -28,7 +28,7 @@ class RatingManager extends BaseManager implements IRateLogic
     public function validator(array $data)
     {
         return Validator::make($data, [
-            'comment' => 'required|string',
+            'comment' => 'string',
             'rating' => 'required|integer|in:0,1,',
         ]);
     }
@@ -43,10 +43,10 @@ class RatingManager extends BaseManager implements IRateLogic
             $rate = $this->ratingRepository->findBy('voted_hash', $userOrHash)
                          ->where('user_to_id', $user_to_id)
                          ->where('trip_id', $trip_id)
-                         ->where('created_at', '>=', Carbon::Now()->subDays(15))
+                         ->where('created_at', '>=', Carbon::Now()->subDays(Rating::RATING_INTERVAL))
                          ->first();
         }
-        if (! $rate->voted && $rate->created_at->addDays(Rating::RATING_INTERVAL)->gte(Carbon::now())) {
+        if (!$rate->voted && $rate->created_at->addDays(Rating::RATING_INTERVAL)->gte(Carbon::now())) {
             return $rate;
         }
     }
@@ -90,7 +90,9 @@ class RatingManager extends BaseManager implements IRateLogic
             $rate->rate_at = Carbon::now();
             $rate->rating = parse_boolean($data['rating']) ? Rating::STATE_POSITIVO : Rating::STATE_NEGATIVO;
 
-            return $this->ratingRepository->update($rate);
+            $result = $this->ratingRepository->update($rate);
+            $this->ratingRepository->update_rating_availability($rate);
+            return $result;
         } else {
             $this->setErrors(['error' => 'user_have_already_voted']);
 
@@ -120,6 +122,8 @@ class RatingManager extends BaseManager implements IRateLogic
             ['key' => 'mail_send', 'value' => false],
             ['key' => 'is_passenger', 'value' => false],
         ];
+
+
         $trips = $this->tripRepo->index($criterias, ['user', 'passenger']);
 
         foreach ($trips as $trip) {
@@ -129,7 +133,8 @@ class RatingManager extends BaseManager implements IRateLogic
 
             $passengers = $trip->passenger()->orderBy('created_at', 'desc')->get();
 
-            $pasenger_id = null;
+            $passenger_ids_rates_created = [];
+
             foreach ($passengers as $passenger) {
 
                 $inRatingState = $passenger->request_state == Passenger::STATE_ACCEPTED || $passenger->request_state == Passenger::STATE_CANCELED;
@@ -142,7 +147,8 @@ class RatingManager extends BaseManager implements IRateLogic
                 }
 
                 if ($inRatingState && $canceledButAccepted) {
-                    if ($pasenger_id !== $passenger->user->id) {
+                    // the passenger could be make more than one trip request
+                    if (!in_array($passenger->user->id, $passenger_ids_rates_created)) {
                         $passenger_hash = str_random(40);
                         $rate = $this->ratingRepository->create($driver->id, $passenger->user_id, $trip->id, Passenger::TYPE_PASAJERO, $passenger->request_state, $driver_hash);
 
@@ -150,7 +156,7 @@ class RatingManager extends BaseManager implements IRateLogic
                         $has_passenger = true;
                         event(new PendingEvent($passenger->user, $trip, $passenger_hash));
 
-                        $pasenger_id = $passenger->user->id;
+                        $passenger_ids_rates_created[] = $passenger->user->id;
                     }
                 }
             }

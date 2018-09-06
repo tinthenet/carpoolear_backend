@@ -30,8 +30,8 @@ class ConversationController extends Controller
         $this->user = $this->auth->user();
         $pageNumber = 1;
         $pageSize = 20;
-        if ($request->has('page_number')) {
-            $pageNumber = $request->get('page_number');
+        if ($request->has('page')) {
+            $pageNumber = $request->get('page');
         }
         if ($request->has('page_size')) {
             $pageSize = $request->get('page_size');
@@ -169,5 +169,16 @@ class ConversationController extends Controller
         $messages = $this->conversationLogic->getMessagesUnread($this->user, $conversation, $timestamp);
 
         return $this->collection($messages, new MessageTransformer($this->user));
+    }
+
+
+    public function multiSend(Request $request) {
+        $this->user = $this->auth->user();
+        $message = $request->get('message');
+        $users = $request->get('users');
+        if ($m = $this->conversationLogic->sendToAll($this->user, $users, $message)) {
+            return ['message' => true];
+        }
+        throw new Exception('Bad request exceptions', $this->conversationLogic->getErrors());
     }
 }

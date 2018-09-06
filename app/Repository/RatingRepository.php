@@ -2,6 +2,7 @@
 
 namespace STS\Repository;
 
+use DB;
 use Carbon\Carbon;
 use STS\Entities\Rating as RatingModel;
 use STS\Contracts\Repository\IRatingRepository;
@@ -19,8 +20,13 @@ class RatingRepository implements IRatingRepository
 
     public function getRatings($user, $data = [])
     {
+        // $inQuery = "id IN (SELECT id FROM availables_ratings WHERE user_id_to = '" . $user->id . "' )";
+
         $ratings = RatingModel::where('user_id_to', $user->id);
-        $ratings->where('voted', true);
+
+        $ratings->where('available', 1);
+
+        // $ratings->whereRaw($inQuery);
 
         if (isset($data['value'])) {
             $value = parse_boolean($data['value']);
@@ -28,10 +34,29 @@ class RatingRepository implements IRatingRepository
             $ratings->where('rating', $value);
         }
 
+        // $ratings->where('created_at', '<=', Carbon::Now()->subDays(RatingModel::RATING_INTERVAL));
+
+        $ratings->orderBy('created_at', 'desc');
+
         $pageNumber = isset($data['page']) ? $data['page'] : null;
         $pageSize = isset($data['page_size']) ? $data['page_size'] : null;
 
         return make_pagination($ratings, $pageNumber, $pageSize);
+    }
+
+   
+
+    public function getRatingsCount ($user, $data) 
+    {
+        $value = parse_boolean($data['value']);
+        $results = DB::select( DB::raw("SELECT count(*) AS 'count' FROM availables_ratings WHERE user_id_to = :user_id AND rating = :rating"), array(
+            'user_id' => $user->id,
+            'rating' => $value
+        ));
+        if (count($results) && isset($results[0]->count)) {
+            return $results[0]->count;
+        }
+        return 0;
     }
 
     public function getPendingRatings($user)
@@ -39,7 +64,7 @@ class RatingRepository implements IRatingRepository
         $ratings = RatingModel::where('user_id_from', $user->id);
         $ratings->where('voted', false);
         $ratings->with(['from', 'to', 'trip']);
-        $ratings->where('created_at', '>=', Carbon::Now()->subDays(15));
+        $ratings->where('created_at', '>=', Carbon::Now()->subDays(RatingModel::RATING_INTERVAL));
 
         return $ratings->get();
     }
@@ -79,5 +104,15 @@ class RatingRepository implements IRatingRepository
     public function update($rateModel)
     {
         return $rateModel->save();
+    }
+
+
+    public function update_rating_availability ($rateModel)
+    {
+        // CALL update_rating_availability(NEW.id, NEW.trip_id, NEW.user_id_from, NEW.user_id_to);
+        $params = array($rateModel->id, $rateModel->trip_id, $rateModel->user_id_from, $rateModel->user_id_to);
+        return DB::select('CALL update_rating_availability (?,?,?,?)', $params);
+
+        
     }
 }

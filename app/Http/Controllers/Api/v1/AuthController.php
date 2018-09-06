@@ -56,6 +56,17 @@ class AuthController extends Controller
 
     public function retoken(Request $request)
     {
+        $config = new \stdClass();
+        $config->donation = new \stdClass();
+        $config->donation->month_days = config('carpoolear.donation_month_days');
+        $config->donation->trips_count = config('carpoolear.donation_trips_count');
+        $config->donation->trips_offset = config('carpoolear.donation_trips_offset');
+        $config->donation->trips_rated = config('carpoolear.donation_trips_rated');
+        $config->donation->ammount_needed = config('carpoolear.donation_ammount_needed');
+        $config->banner = new \stdClass();
+        $config->banner->url = config('carpoolear.banner_url');
+        $config->banner->image = config('carpoolear.banner_image');
+
         try {
             $oldToken = $token = JWTAuth::getToken()->get();
             $user = JWTAuth::authenticate($token);
@@ -79,7 +90,25 @@ class AuthController extends Controller
             $device = $this->deviceLogic->updateBySession($oldToken, $data);
         }
 
-        return $this->response->withArray(['token' => $token]);
+        if (isset($user)) {
+            // Validar si está baneado
+            $user_to_validate = $this->userLogic->find($user->id);
+            if ($user_to_validate->banned) {
+                return response()->json('banned', 403);
+            } else {
+                return $this->response->withArray([
+                    'token' => $token,
+                    'config' => $config
+                ]);
+            }
+        }
+        
+        return $this->response->withArray([
+            'token' => $token,
+            'config' => $config
+        ]);
+
+
     }
 
     public function logout(Request $request)

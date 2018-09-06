@@ -3,12 +3,25 @@
 namespace STS\Http\Controllers;
 
 use Illuminate\Http\Request;
+use STS\Contracts\Logic\User as UserLogic;
+use STS\Entities\Rating as RatingModel;
+use Carbon\Carbon;
 
 class HomeController extends Controller
 {
     public function home()
     {
         return view('home');
+    }
+
+    public function privacidad()
+    {
+        return view('privacidad');
+    }
+
+    public function terminos()
+    {
+        return view('terminos');
     }
 
     public function acercaDeEquipo()
@@ -90,6 +103,22 @@ class HomeController extends Controller
         return view('contacto');
     }
 
+    public function encuentrocarpoolero()
+    {
+        return view('encuentrocarpoolero');
+    }
+
+    public function donar()
+    {
+        return view('donar');
+    }
+
+
+    public function datos()
+    {
+        return view('datos');
+    }
+
     public function endsWith($haystack, $needle)
     {
         $length = strlen($needle);
@@ -98,6 +127,42 @@ class HomeController extends Controller
         }
 
         return substr($haystack, -$length) === $needle;
+    }
+
+    public function test () {
+        /* $user = new \STS\User();
+        $user->id = 11525;
+        $ratingRepository = new \STS\Repository\RatingRepository();
+        $data = array();
+        $data['value'] = RatingModel::STATE_POSITIVO;
+        $ratings = $ratingRepository->getRatingsCount($user, $data);
+        var_dump($ratings); die; */
+
+
+        /* $user = \STS\User::where('id', 23124)->first();
+        $messageRepo = new \STS\Repository\MessageRepository();
+        $timestamp = time();
+        $messages = $messageRepo->getMessagesUnread($user, $timestamp);
+        echo $messages->count(); die;*/
+        /*$criterias = [
+            ['key' => 'trip_date', 'value' => '2018-03-08 13:29:00', 'op' => '<'],
+            ['key' => 'mail_send', 'value' => false],
+            ['key' => 'is_passenger', 'value' => false],
+        ];
+
+        $withs = ['user', 'passenger'];
+
+        $trips = \STS\Entities\Trip::orderBy('trip_date');
+
+
+        $trips->where('mail_send', false);
+        $trips->where('is_passenger', false);
+
+        var_dump($trips->get());die;*/
+        $first = new Carbon('first day of this month');
+        $last = new Carbon('last day of this month');
+        var_dump($first);
+        var_dump($last);die;
     }
 
     public function handleApp($name)
@@ -111,4 +176,27 @@ class HomeController extends Controller
             return \File::get(public_path().'/app/index.html');
         }
     }
+
+    public function handleDev($name)
+    {
+        if ($this->endsWith($name, '.js')) {
+            $strings = explode('/', $name);
+            $file = $strings[count($strings) - 1];
+
+            return \File::get(public_path().'/dev/'.$file);
+        } else {
+            return \File::get(public_path().'/dev/index.html');
+        }
+    }
+
+
+    public function desuscribirme(Request $request, UserLogic $userLogic)
+    {
+        $email = $request->get("email");
+        if ($email) {
+            $userLogic->mailUnsuscribe($email);
+        }
+        return view('unsuscribe');
+    }
+
 }

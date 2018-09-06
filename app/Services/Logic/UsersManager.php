@@ -100,6 +100,15 @@ class UsersManager extends BaseManager implements UserLogic
         }
     }
 
+
+    public function mailUnsuscribe($email)
+    {
+        $data['emails_notifications'] = false;
+        $user = $this->repo->getUserBy('email', $email);
+        $this->repo->update($user, $data);
+        return $user;
+    }
+
     public function updatePhoto($user, $data)
     {
         $v = Validator::make($data, ['profile' => 'required']);
@@ -116,7 +125,9 @@ class UsersManager extends BaseManager implements UserLogic
                 $data = base64_decode($data[1]);
     
                 $name = $fileManager->createFromData($data, 'jpeg', 'image/profile');
+
                 $this->repo->updatePhoto($user, $name);
+                
                 event(new UpdateEvent($user->id));
                 return $user;
             } else {
@@ -183,6 +194,7 @@ class UsersManager extends BaseManager implements UserLogic
     {
         $profile = $this->repo->show($profile_id);
         if ($profile) {
+            // $profile->donations = $profile->donations->get();
             return $profile;
         }
         $this->setErrors(['error' => 'profile not found']);
@@ -217,5 +229,12 @@ class UsersManager extends BaseManager implements UserLogic
         }
 
         return $distancia;
+    }
+
+    public function registerDonation($user, $donation)
+    {
+        $donation->user_id = $user->id;
+        $donation->month = date('Y-m-01 00:00:00');
+        $donation->save();
     }
 }
